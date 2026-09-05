@@ -126,6 +126,7 @@ container system start
 ```
 
 ---
+
 # Installing container with curl
 
 If you do not have the GitHUB cli installed, you can also download the
@@ -150,6 +151,7 @@ sudo installer \
 ```
 
 ---
+
 # Uninstalling container
 
 To uninstall the Apple Container CLI tool, use the uninstall script
