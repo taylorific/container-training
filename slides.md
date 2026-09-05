@@ -27,7 +27,7 @@ themeConfig:
   paginationPagesDisabled: [1]
 ---
 
-# Containers
+# Container Training
 
 ##### Mischa Taylor | 📧 <taylor@linux.com>
 
@@ -61,7 +61,7 @@ routeAlias: toc
 layout: section
 ---
 
-# Install and configure libvirt
+# Apple Containerization on macOS
 
 <br>
 <br>
@@ -71,4 +71,94 @@ layout: section
 hideInToc: true
 ---
 
-# macOS Containers
+# container
+
+`container` is Apple's command-line tool for running Linux containers on macOS.
+
+You need a mac with Apple silicon and macOS 26 (Tahoe) or later to run `container`.
+
+`container` does not come with macOS, you must download the latest signed
+installer from https://github.com/apple/container/releases
+
+---
+hideInToc: true
+---
+
+# Check requirements
+
+Check to make sure that your machine is an Apple Silicon mac.
+
+```bash
+# Architecture should be arm64
+% uname -m
+arm64
+```
+
+And make sure you are running at least macOS 26 (Tahoe).
+
+```bash
+# Should be at least ProductVersion 26
+% sw_vers
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+```
+
+---
+
+# Installing container with gh
+
+If you have the GitHUB cli installed:
+
+```bash
+mkdir -p /tmp/apple-container
+cd /tmp/apple-container
+
+gh release download \
+  --repo apple/container \
+  --pattern '*installer-signed.pkg'
+
+sudo installer \
+  -pkg container-*-installer-signed.pkg \
+  -target /
+
+container system start
+```
+
+---
+# Installing container with curl
+
+If you do not have the GitHUB cli installed, you can also download the
+installer entirely with `curl`, using the GitHub API.
+
+```bash
+mkdir -p /tmp/apple-container
+cd /tmp/apple-container
+
+url=$(
+  curl -s https://api.github.com/repos/apple/container/releases/latest |
+  jq -r '.assets[]
+         | select(.name | endswith("installer-signed.pkg"))
+         | .browser_download_url'
+)
+
+curl -L -O "$url"
+
+sudo installer \
+  -pkg container-*-installer-signed.pkg \
+  -target /
+```
+
+---
+# Uninstalling container
+
+To uninstall the Apple Container CLI tool, use the uninstall script
+located in `/usr/local/bin`.
+
+```bash
+# Keep User Data
+/usr/local/bin/uninstall-container.sh -k
+
+# Delete all user data
+/usr/local/bin/uninstall-container.sh -d
+```
