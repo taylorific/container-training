@@ -174,12 +174,13 @@ The TOML files are read once at service startup.
 
 The service reads configuration with first-match-wins precedence:
 
-```
+```bash
 1. ~/.config/container/config.toml
            ↓
 2. /usr/local/etc/container/config.toml
            ↓
-3. hard-coded defaults```
+3. hard-coded defaults
+```
 
 ---
 hideInToc: true
