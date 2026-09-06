@@ -403,3 +403,233 @@ These are not two namespaces inside one conventional
 Docker-style Linux VM.
 
 Each workload has VM-based isolation.
+
+---
+hideInToc: true
+---
+
+# Container Networking
+
+Containerization provides networking services for containers.
+
+Starting the system creates a default network.
+
+Inspect it:
+
+```bash
+container network list
+```
+
+You can also create isolated networks:
+
+```bash
+container network create lab
+```
+
+Then attach a workload:
+
+```bash
+container run \
+  --network lab \
+  --rm \
+  -it alpine sh
+```
+
+---
+hideInToc: true
+---
+
+# Resource Isolation
+
+Because each container is backed by a lightweight VM,
+resources can be assigned directly to that environment.
+
+For example:
+
+```bash
+container run \
+  --rm \
+  --cpus 2 \
+  --memory 2g \
+  ubuntu:latest
+```
+
+Think about what this means.
+
+Instead of:
+
+```text
+cgroup limit
+     │
+     ▼
+shared kernel
+```
+
+we now also have:
+
+```text
+VM resource allocation
+     │
+     ▼
+Linux kernel
+     │
+     ▼
+container workload
+```
+
+---
+hideInToc: true
+---
+
+# Images Are Still OCI Images
+
+Apple did not invent a new container image format.
+
+The system works with standard:
+
+# OCI images
+
+For example:
+
+```bash
+container image pull ubuntu:latest
+```
+
+List images:
+
+```bash
+container image list
+```
+
+Run one:
+
+```bash
+container run --rm -it ubuntu:latest bash
+```
+
+The image ecosystem remains familiar.
+
+---
+hideInToc: true
+---
+
+# Build Images
+
+Apple's CLI can also build container images.
+
+For example:
+
+```dockerfile
+FROM alpine
+
+RUN apk add --no-cache curl
+
+CMD ["sh"]
+```
+
+Build:
+
+```bash
+container build -t demo .
+```
+
+Run:
+
+```bash
+container run --rm -it demo
+```
+
+So the developer workflow remains recognizable.
+
+---
+hideInToc: true
+---
+
+# What About Persistent Linux Environments?
+
+A container is usually modeled around:
+
+```text
+an application
+```
+
+But developers sometimes want:
+
+```text
+a Linux development machine
+```
+
+Apple now provides another abstraction:
+
+# Container Machine
+
+---
+hideInToc: true
+---
+
+# Container Machine
+
+A Container Machine is:
+
+```text
+fast
+lightweight
+persistent
+Linux
+OCI-image based
+integrated with macOS
+```
+
+Think:
+
+```text
+container
+    =
+ephemeral application environment
+```
+
+versus:
+
+```text
+container machine
+    =
+persistent Linux environment
+```
+
+---
+hideInToc: true
+---
+
+# Create a Container Machine
+
+For example:
+
+```bash
+container machine create \
+  --name demo \
+  --set-default \
+  alpine
+```
+
+Then:
+
+```bash
+container machine run
+```
+
+You now have an interactive Linux environment.
+
+
+---
+hideInToc: true
+---
+
+# Further Reading
+
+Apple Container: https://github.com/apple/container
+
+Apple Containerization: https://github.com/apple/containerization
+
+WWDC25: Meet Containerization
+
+WWDC26: Discover container machines
