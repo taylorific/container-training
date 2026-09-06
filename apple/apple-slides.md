@@ -134,6 +134,57 @@ container run --rm alpine echo hello
 hideInToc: true
 ---
 
+# container tool pulls images from Docker Hub by default
+
+By default, Apple's `container` tool uses **Docker Hub (docker.io)** for
+unqualified image names.
+
+To view the current setting:
+
+```bash
+container system property get registry.domain
+```
+
+To change it:
+
+```bash
+container property set registry.domain registry.example.com
+```
+
+To revert to the built-in default:
+
+```bash
+container system property clear registry.domain
+```
+
+---
+hideInToc: true
+---
+
+# container settings
+
+To see all current properties:
+
+```bash
+contaienr system property list
+```
+
+The configuration is effectively immutable while the service is running.
+The TOML files are read once at service startup.
+
+The service reads configuration with first-match-wins precedence:
+
+```
+1. ~/.config/container/config.toml
+           ↓
+2. /usr/local/etc/container/config.toml
+           ↓
+3. hard-coded defaults```
+
+---
+hideInToc: true
+---
+
 # Start an interative environment
 
 ```bash
