@@ -786,6 +786,8 @@ WWDC25: Meet Containerization
 
 WWDC26: Discover container machines
 
+Apple Container Technical Overview: https://github.com/apple/container/blob/main/docs/technical-overview.md
+
 Apple Container: Best Guide for 2026: https://kalinga.ai/apple-container-guide-2026/
 
 Apple Containers on macOS: A Technical Comparison With Docker: https://thenewstack.io/apple-containers-on-macos-a-technical-comparison-with-docker/
