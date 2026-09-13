@@ -2,6 +2,126 @@
 layout: section
 ---
 
+# Docker Desktop vs Apple Container
+
+<br>
+<br>
+<Link to="toc" title="Table of Contents"/>
+
+---
+layout: two-cols
+---
+
+# Docker Desktop
+
+- Commercial product from Docker, Inc.
+- Runs **one shared Linux VM** hosting all your containers
+- Uses Apple's Virtualization framework (or QEMU) under the hood
+- Mature: Compose, Swarm, extensions, CI ecosystem, GUI dashboard
+- Works on Intel **and** Apple Silicon Macs
+- Free for individuals/small teams; **paid** for orgs over 250 employees or $10M+ revenue
+
+::right::
+
+# Apple Container
+
+- Open-source CLI from Apple (Apache-2.0), written in Swift
+- Announced WWDC 2025, reached **v1.0.0** in June 2026
+- Runs each container in its **own lightweight VM**
+- No daemon, no menu-bar app, no subscription
+- **Apple Silicon only** — no Intel support planned
+- CLI-only — no bundled GUI
+
+---
+
+# Architecture: the core difference
+
+<div class="grid grid-cols-2 gap-8 pt-4">
+
+<div>
+
+### Docker Desktop
+One big shared Linux VM
+
+```
+┌─────────── macOS ───────────┐
+│  ┌──────── Linux VM ──────┐ │
+│  │ container A            │ │
+│  │ container B            │ │
+│  │ container C            │ │
+│  │ (shared kernel)         │ │
+│  └─────────────────────────┘│
+└──────────────────────────────┘
+```
+
+Containers share one kernel and one VM's resource pool.
+
+</div>
+
+<div>
+
+### Apple Container
+One micro-VM per container
+
+```
+┌──────────── macOS ────────────┐
+│ ┌───VM A───┐ ┌───VM B───┐     │
+│ │container │ │container │ ... │
+│ │   A      │ │   B      │     │
+│ └──────────┘ └──────────┘     │
+└────────────────────────────────┘
+```
+
+Each container gets hypervisor-level isolation via `Virtualization.framework`.
+
+</div>
+
+</div>
+
+---
+
+# Why the architecture matters
+
+<v-clicks>
+
+- **Isolation**: Apple's per-container VMs give hardware-level separation between workloads — a compromised container can't as easily see its neighbors
+- **Resource overhead**: Docker's shared VM amortizes memory/CPU better across many small containers; Apple spins up a VM per container, which adds baseline overhead per container
+- **Blast radius**: a kernel-level bug affects one container under Apple's model, vs. potentially all containers sharing Docker's VM
+- **Isolation vs. density** is the real trade-off — pick based on whether you're running 3 containers or 30
+
+</v-clicks>
+
+---
+
+# Biggest difference is in networking
+
+<div class="grid grid-cols-2 gap-8 pt-4">
+
+<div>
+
+### Docker Desktop
+- Containers sit behind the shared VM
+- Requires **port mapping** (`-p 8080:80`) to reach a container from the Mac
+- Supports `--network host`, `--link`, custom bridge networks
+
+</div>
+
+<div>
+
+### Apple Container
+- Each container gets its **own IP address**
+- Reachable directly by name: `myapp.dev.internal` — no port mapping needed
+- **No** `--network host` or `--link` yet
+- Cross-container networking still has rough edges; isolated per-container networks need macOS 26 (Tahoe) — macOS 15 forces a shared network
+
+</div>
+
+</div>
+
+---
+layout: section
+---
+
 # Apple Containerization on macOS
 
 <br>
@@ -108,7 +228,39 @@ located in `/usr/local/bin`.
 hideInToc: true
 ---
 
-# Starting the container daemon
+# Updating container
+
+If you're updating container, first stop your existing container daemon:
+
+```bash
+container system stop
+```
+
+To upgrade to the latest release, use the `update-container.sh` script (in `/usr/local/bin`):
+
+```
+/usr/local/bin/update-container.sh
+```
+
+To downgrade, uninstall your existing container and use the `-v` flag to install a specific version:
+
+```
+# -k flag keeps user data, -d deletes all user data
+/usr/local/bin/uninstall-container.sh -k
+/usr/local/bin/update-container.sh -v 1.4.0
+```
+
+After updating, start the system service again with:
+
+```bash
+container system start
+```
+
+---
+hideInToc: true
+---
+
+# Starting the container service
 
 ```bash
  % container system start
