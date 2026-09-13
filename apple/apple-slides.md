@@ -49,9 +49,9 @@ One big shared Linux VM
 │  │ container A            │ │
 │  │ container B            │ │
 │  │ container C            │ │
-│  │ (shared kernel)         │ │
-│  └─────────────────────────┘│
-└──────────────────────────────┘
+│  │ (shared kernel)        │ │
+│  └────────────────────────┘ │
+└─────────────────────────────┘
 ```
 
 Containers share one kernel and one VM's resource pool.
@@ -69,7 +69,7 @@ One micro-VM per container
 │ │container │ │container │ ... │
 │ │   A      │ │   B      │     │
 │ └──────────┘ └──────────┘     │
-└────────────────────────────────┘
+└───────────────────────────────┘
 ```
 
 Each container gets hypervisor-level isolation via `Virtualization.framework`.
@@ -776,7 +776,7 @@ You now have an interactive Linux environment.
 hideInToc: true
 ---
 
-# Further Reading
+# Sources
 
 Apple Container: https://github.com/apple/container
 
@@ -785,3 +785,9 @@ Apple Containerization: https://github.com/apple/containerization
 WWDC25: Meet Containerization
 
 WWDC26: Discover container machines
+
+Apple Container: Best Guide for 2026: https://kalinga.ai/apple-container-guide-2026/
+
+Apple Containers on macOS: A Technical Comparison With Docker: https://thenewstack.io/apple-containers-on-macos-a-technical-comparison-with-docker/
+
+Tired of updating Docker for Mac apple/container is enough: https://www.outcoldman.com/blog/2026/05/02/apple-container-tired-of-docker/
