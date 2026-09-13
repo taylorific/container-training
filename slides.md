@@ -57,9 +57,11 @@ routeAlias: toc
 
 <Toc columns="2"/>
 
+<!--
 ---
 src: ./linux/linux-slides.md
 ---
+-->
 
 ---
 src: ./apple/apple-slides.md
