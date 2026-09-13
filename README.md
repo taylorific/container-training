@@ -23,8 +23,6 @@ docker run -it --rm \
   --entrypoint /bin/bash \
   docker.io/boxcutter/slidev
 
-  # pin to 52.15.2 for now
-  # https://github.com/slidevjs/slidev/issues/2629
   git pull
   rm -rf node_modules package-lock.json
   npm install
