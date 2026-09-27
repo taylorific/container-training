@@ -87,8 +87,6 @@ hideInToc: true
 
 # Why the architecture matters
 
-<v-clicks>
-
 - **Isolation**: Apple's per-container VMs give hardware-level separation between workloads — a compromised container can't as easily see its neighbors
 - **Resource overhead**: Docker's shared VM amortizes memory/CPU better across many small containers; Apple spins up a VM per container, which adds baseline overhead per container
 - **Blast radius**: a kernel-level bug affects one container under Apple's model, vs. potentially all containers sharing Docker's VM
@@ -225,10 +223,10 @@ located in `/usr/local/bin`.
 
 ```bash
 # Keep User Data
-/usr/local/bin/uninstall-container.sh -k
+sudo /usr/local/bin/uninstall-container.sh -k
 
 # Delete all user data
-/usr/local/bin/uninstall-container.sh -d
+sudo /usr/local/bin/uninstall-container.sh -d
 ```
 
 ---
@@ -246,15 +244,15 @@ container system stop
 To upgrade to the latest release, use the `update-container.sh` script (in `/usr/local/bin`):
 
 ```
-/usr/local/bin/update-container.sh
+sudo /usr/local/bin/update-container.sh
 ```
 
 To downgrade, uninstall your existing container and use the `-v` flag to install a specific version:
 
 ```
 # -k flag keeps user data, -d deletes all user data
-/usr/local/bin/uninstall-container.sh -k
-/usr/local/bin/update-container.sh -v 1.4.0
+sudo /usr/local/bin/uninstall-container.sh -k
+sudo /usr/local/bin/update-container.sh -v 1.4.0
 ```
 
 After updating, start the system service again with:
