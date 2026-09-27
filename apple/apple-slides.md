@@ -321,7 +321,7 @@ hideInToc: true
 To see all current properties:
 
 ```bash
-contaienr system property list
+container system property list
 ```
 
 The configuration is effectively immutable while the service is running.
