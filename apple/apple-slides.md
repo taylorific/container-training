@@ -92,8 +92,6 @@ hideInToc: true
 - **Blast radius**: a kernel-level bug affects one container under Apple's model, vs. potentially all containers sharing Docker's VM
 - **Isolation vs. density** is the real trade-off — pick based on whether you're running 3 containers or 30
 
-</v-clicks>
-
 ---
 hideInToc: true
 ---
