@@ -133,7 +133,7 @@ layout: two-cols
 # kind: what it is
 
 - Each Kubernetes **node is a container** running on your container engine
-- Built by the Kubernetes project to **test Kubernetes itself**
+- Created to **test Kubernetes itself**
 - Runs a real upstream control plane (built with `kubeadm` inside the node container)
 - Multi-node clusters on a single laptop
 - Clusters start in under a minute and are **disposable**
@@ -228,7 +228,7 @@ layout: two-cols
 
 - CNCF project originally created by Rancher (now SUSE)
 - Fully conformant Kubernetes in a **single binary**
-- Low memory footprint — runs on Raspberry Pis and edge devices
+- Low memory footprint — fits on edge devices
 - Runs on **real machines**: VMs, bare metal, ARM boards
 - Linux only (use a VM on macOS/Windows, or `k3d` to run k3s in containers)
 
@@ -329,7 +329,7 @@ layout: two-cols
 
 ::right::
 
-# What you're responsible for
+# Your responsibility
 
 kubeadm deliberately **does not** choose for you:
 
@@ -409,14 +409,14 @@ layout: two-cols
 
 - A minimal, **immutable Linux OS** built only to run Kubernetes
 - No SSH, no shell, no package manager
-- Managed entirely through an API (`talosctl`) and declarative config
+- Managed via API (`talosctl`) and declarative config
 - From Sidero Labs
 
 Explore it once you're comfortable with kubeadm and want declarative node management.
 
 ::right::
 
-# Or skip it: managed Kubernetes
+# Or: managed Kubernetes
 
 - **EKS**, **GKE**, **AKS**
 - The provider runs the control plane
