@@ -600,8 +600,9 @@ hideInToc: true
 # Talos: use the cluster
 
 ```bash
-# kubectl within one minor version of the cluster (Kubernetes v1.35.0 here)
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# kubectl must be within one minor version of the cluster: pin it.
+# (stable.txt is already v1.37, too new for this v1.35 cluster)
+curl -LO "https://dl.k8s.io/release/v1.35.0/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 talosctl kubeconfig ./kubeconfig -n $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
@@ -616,6 +617,10 @@ talos-j06-rk3   Ready    control-plane   8m54s   v1.35.0
 ```
 
 `kubectl get pods -A` shows CoreDNS, Flannel, kube-proxy and the control plane: Talos chose the CNI for you.
+
+<!--
+Tested end to end on 2026-11-23 on an Ubuntu 26.04 KVM host: from ISO download to all pods Running took about 3 minutes. Talos v1.12.3 ships Kubernetes v1.35.0; the latest Talos is v1.14.6, so update the versions on these slides together.
+-->
 
 ---
 hideInToc: true
