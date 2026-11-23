@@ -401,25 +401,246 @@ sudo kubeadm join <control-plane-ip>:6443 \
 ```
 
 ---
+layout: section
+---
+
+# Talos
+
+An operating system that only runs Kubernetes
+
+<br>
+<br>
+<Link to="toc" title="Table of Contents"/>
+
+---
 hideInToc: true
 layout: two-cols
 ---
 
-# Next step: Talos
+# Talos: what it is
 
 - A minimal, **immutable Linux OS** built only to run Kubernetes
-- No SSH, no shell, no package manager
-- Managed via API (`talosctl`) and declarative config
+- **No SSH, no shell, no package manager**
+- Managed entirely through an API with `talosctl` and a declarative machine config
+- Upgrades replace the whole OS image instead of patching it
 - From Sidero Labs
-
-Explore it once you're comfortable with kubeadm and want declarative node management.
 
 ::right::
 
-# Or: managed Kubernetes
+# When to use it
+
+- You want nodes defined by config files you can check in, not by hand-run commands
+- Bare metal, VMs and homelabs
+- A small attack surface: nothing on the node to log in to
+
+Explore it once you're comfortable with kubeadm, so you know what Talos is doing for you.
+
+---
+hideInToc: true
+---
+
+# Talos: build an install image
+
+The **Image Factory** at https://factory.talos.dev/ builds an image with the extensions you need:
+
+- Hardware type: **Bare-metal Machine**; latest stable Talos version; architecture **amd64**
+- System extensions: `qemu-guest-agent`, `util-linux-tools`
+- Extra kernel arguments: `console=ttyS0,115200`; **UEFI only**
+
+At "schematic ready", download the ISO:
+
+```bash
+mkdir talos-cluster && cd talos-cluster
+SCHEMATIC=9385ba106a3a7d3eff277f44bf0468b6de749769beee4ff47951f31b4955d334
+curl -LO https://factory.talos.dev/image/$SCHEMATIC/v1.12.3/metal-amd64.iso
+shasum -a 256 metal-amd64.iso
+sudo cp metal-amd64.iso /var/lib/libvirt/iso/metal-amd64.iso
+```
+
+The ISO boots into a **RAM-only live mode**; Talos installs itself to disk once you apply a config.
+
+<!--
+The long path in the URL is the schematic ID: it identifies the exact set of extensions and kernel arguments chosen in the Image Factory. Check the Talos version before each delivery.
+-->
+
+---
+hideInToc: true
+---
+
+# Talos: boot a node (KVM)
+
+```bash
+# UEFI firmware: the image was built UEFI only
+LOADER=loader=/usr/share/OVMF/OVMF_CODE_4M.fd,loader.readonly=yes,loader.type=pflash
+NVRAM=nvram.template=/usr/share/OVMF/OVMF_VARS_4M.fd
+
+virt-install \
+  --connect qemu:///system \
+  --name talos-cluster \
+  --boot $LOADER,$NVRAM \
+  --cdrom /var/lib/libvirt/iso/metal-amd64.iso \
+  --disk pool=default,format=qcow2,bus=virtio,size=64 \
+  --memory 4096 \
+  --vcpus 4 \
+  --os-variant linux2022 \
+  --network network=host-network,model=virtio \
+  --graphics spice \
+  --noautoconsole
+
+# Talos boots into RAM-only live mode
+virt-viewer talos-cluster &
+```
+
+Any VM or bare-metal machine works the same way: boot the ISO and note the IP address on its console.
+
+---
+hideInToc: true
+---
+
+# Talos: install talosctl
+
+Use the **same version** as the image:
+
+```bash
+curl -LO https://github.com/siderolabs/talos/releases/download/v1.12.3/talosctl-linux-amd64
+shasum -a 256 talosctl-linux-amd64
+sudo install -m 0755 talosctl-linux-amd64 /usr/local/bin/talosctl
+
+talosctl version
+```
+
+```text
+Client:
+	Tag:         v1.12.3
+Server:
+error constructing client: failed to determine endpoints
+```
+
+The server error is expected: there's no cluster to talk to yet.
+
+---
+hideInToc: true
+---
+
+# Talos: find the node and its disk
+
+```bash
+# IP address from qemu-guest-agent, or read it from the console
+virsh domifaddr talos-cluster --source agent
+export CONTROL_PLANE_IP=10.63.34.66
+
+talosctl get disks --insecure --nodes "$CONTROL_PLANE_IP"
+```
+
+```text
+NODE   NAMESPACE   TYPE   ID      VERSION   SIZE     READ ONLY   TRANSPORT   ROTATIONAL   MODEL
+       runtime     Disk   sr0     2         215 MB   false       sata        true         QEMU DVD-ROM
+       runtime     Disk   vda     2         69 GB    false       virtio      true
+```
+
+```bash
+export DISK_ID=vda
+```
+
+`--insecure` is only for this first contact, before the node has a config and certificates.
+
+---
+hideInToc: true
+---
+
+# Talos: generate and apply the config
+
+```bash
+# Generate the cluster's machine configs and client config
+talosctl gen config talos-cluster https://$CONTROL_PLANE_IP:6443 \
+  --install-disk /dev/$DISK_ID -o configs/
+
+# A single-node cluster must also run workloads on the control plane
+cat > single-node-cluster-patch.yaml <<EOF
+cluster:
+  allowSchedulingOnControlPlanes: true
+EOF
+
+# Apply it: the node installs to disk and reboots
+talosctl apply-config --insecure \
+  --nodes $CONTROL_PLANE_IP \
+  --file configs/controlplane.yaml \
+  --config-patch @single-node-cluster-patch.yaml
+```
+
+`configs/` now holds `controlplane.yaml`, `worker.yaml` and `talosconfig`: the whole cluster as files.
+
+---
+hideInToc: true
+---
+
+# Talos: bootstrap the cluster
+
+```bash
+# Bootstrap etcd, once, on one control plane node
+talosctl bootstrap --nodes $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
+  --talosconfig configs/talosconfig
+
+# Watch it come up
+talosctl dashboard --nodes $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
+  --talosconfig configs/talosconfig
+
+talosctl logs -f -n $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
+  --talosconfig configs/talosconfig etcd
+talosctl service -n $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
+  --talosconfig configs/talosconfig
+```
+
+There's no shell on the node: logs, services and the dashboard all come through the API.
+
+---
+hideInToc: true
+---
+
+# Talos: use the cluster
+
+```bash
+# kubectl within one minor version of the cluster (Kubernetes v1.35.0 here)
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+talosctl kubeconfig ./kubeconfig -n $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
+  --talosconfig configs/talosconfig
+export KUBECONFIG=./kubeconfig
+kubectl get nodes
+```
+
+```text
+NAME            STATUS   ROLES           AGE     VERSION
+talos-j06-rk3   Ready    control-plane   8m54s   v1.35.0
+```
+
+`kubectl get pods -A` shows CoreDNS, Flannel, kube-proxy and the control plane: Talos chose the CNI for you.
+
+---
+hideInToc: true
+---
+
+# Talos: clean up and read more
+
+```bash
+virsh destroy talos-cluster
+virsh undefine talos-cluster --nvram --remove-all-storage
+```
+
+References:
+
+- Talos on KVM: https://docs.siderolabs.com/talos/v1.11/platform-specific-installations/virtualized-platforms/kvm
+- Talos with Cilium on Proxmox: https://unixorn.github.io/post/homelab/k8s/01-talos-with-cilium-cni-on-proxmox/
+
+---
+hideInToc: true
+---
+
+# Or skip it: managed Kubernetes
 
 - **EKS**, **GKE**, **AKS**
-- The provider runs the control plane
+- The provider runs the control plane: upgrades, etcd, certificates
 - Removes much of the cluster-management burden
 - Does **not** remove the complexity of running workloads
 
