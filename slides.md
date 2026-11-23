@@ -66,3 +66,7 @@ src: ./linux/linux-slides.md
 ---
 src: ./apple/apple-slides.md
 ---
+
+---
+src: ./kubernetes/kubernetes-install-slides.md
+---
