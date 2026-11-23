@@ -452,7 +452,7 @@ At "schematic ready", download the ISO:
 ```bash
 mkdir talos-cluster && cd talos-cluster
 SCHEMATIC=9385ba106a3a7d3eff277f44bf0468b6de749769beee4ff47951f31b4955d334
-curl -LO https://factory.talos.dev/image/$SCHEMATIC/v1.12.3/metal-amd64.iso
+curl -LO https://factory.talos.dev/image/$SCHEMATIC/v1.14.6/metal-amd64.iso
 shasum -a 256 metal-amd64.iso
 sudo cp metal-amd64.iso /var/lib/libvirt/iso/metal-amd64.iso
 ```
@@ -502,8 +502,9 @@ hideInToc: true
 Use the **same version** as the image:
 
 ```bash
-curl -LO https://github.com/siderolabs/talos/releases/download/v1.12.3/talosctl-linux-amd64
-shasum -a 256 talosctl-linux-amd64
+RELEASE=https://github.com/siderolabs/talos/releases/download/v1.14.6
+curl -LO $RELEASE/talosctl-linux-amd64
+curl -L $RELEASE/sha256sum.txt | grep talosctl-linux-amd64$ | shasum -a 256 -c
 sudo install -m 0755 talosctl-linux-amd64 /usr/local/bin/talosctl
 
 talosctl version
@@ -511,9 +512,9 @@ talosctl version
 
 ```text
 Client:
-	Tag:         v1.12.3
+	Tag:         v1.14.6
 Server:
-error constructing client: failed to determine endpoints
+failed to determine endpoints
 ```
 
 The server error is expected: there's no cluster to talk to yet.
@@ -527,15 +528,15 @@ hideInToc: true
 ```bash
 # IP address from qemu-guest-agent, or read it from the console
 virsh domifaddr talos-cluster --source agent
-export CONTROL_PLANE_IP=10.63.34.66
+export CONTROL_PLANE_IP=10.63.44.163
 
 talosctl get disks --insecure --nodes "$CONTROL_PLANE_IP"
 ```
 
 ```text
-NODE   NAMESPACE   TYPE   ID      VERSION   SIZE     READ ONLY   TRANSPORT   ROTATIONAL   MODEL
-       runtime     Disk   sr0     2         215 MB   false       sata        true         QEMU DVD-ROM
-       runtime     Disk   vda     2         69 GB    false       virtio      true
+NODE           NAMESPACE   TYPE   ID    VERSION   SIZE     READ ONLY   TRANSPORT   MODEL
+10.63.44.163   runtime     Disk   sr0   2         249 MB   true        sata        QEMU DVD-ROM
+10.63.44.163   runtime     Disk   vda   2         69 GB    false       virtio
 ```
 
 ```bash
@@ -551,24 +552,30 @@ hideInToc: true
 # Talos: generate and apply the config
 
 ```bash
-# Generate the cluster's machine configs and client config
-talosctl gen config talos-cluster https://$CONTROL_PLANE_IP:6443 \
-  --install-disk /dev/$DISK_ID -o configs/
-
-# A single-node cluster must also run workloads on the control plane
+# A single-node cluster must also run workloads on the control plane:
+# remove the control plane's NoSchedule taint
 cat > single-node-cluster-patch.yaml <<EOF
-cluster:
-  allowSchedulingOnControlPlanes: true
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+taints:
+  node-role.kubernetes.io/control-plane:
+    \$patch: delete
 EOF
 
-# Apply it: the node installs to disk and reboots
-talosctl apply-config --insecure \
-  --nodes $CONTROL_PLANE_IP \
-  --file configs/controlplane.yaml \
-  --config-patch @single-node-cluster-patch.yaml
+# Generate the machine configs and client config, patching the control plane
+talosctl gen config talos-cluster https://$CONTROL_PLANE_IP:6443 \
+  --install-disk /dev/$DISK_ID \
+  --config-patch-control-plane @single-node-cluster-patch.yaml -o configs/
+
+# Apply it: Talos installs itself to disk
+talosctl apply-config --insecure --nodes $CONTROL_PLANE_IP --file configs/controlplane.yaml
 ```
 
 `configs/` now holds `controlplane.yaml`, `worker.yaml` and `talosconfig`: the whole cluster as files.
+
+<!--
+Talos 1.14 split the machine config into typed documents (KubeClusterConfig, KubeNodeConfig, KubeletConfig...). The older patch, cluster.allowSchedulingOnControlPlanes: true, now fails with "already set in v1alpha1 config". KubeNodeConfig only exists in the control plane config, so the patch has to use --config-patch-control-plane (see siderolabs/talos issue 14694). Inside the heredoc, \$patch is escaped so the shell doesn't expand it.
+-->
 
 ---
 hideInToc: true
@@ -600,8 +607,9 @@ hideInToc: true
 # Talos: use the cluster
 
 ```bash
-# kubectl within one minor version of the cluster (Kubernetes v1.35.0 here)
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# kubectl must be within one minor version of the cluster: pin it
+# to the cluster's version rather than following stable.txt
+curl -LO "https://dl.k8s.io/release/v1.37.1/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 talosctl kubeconfig ./kubeconfig -n $CONTROL_PLANE_IP -e $CONTROL_PLANE_IP \
@@ -612,10 +620,14 @@ kubectl get nodes
 
 ```text
 NAME            STATUS   ROLES           AGE     VERSION
-talos-j06-rk3   Ready    control-plane   8m54s   v1.35.0
+talos-zcy-fac   Ready    control-plane   23s     v1.37.1
 ```
 
 `kubectl get pods -A` shows CoreDNS, Flannel, kube-proxy and the control plane: Talos chose the CNI for you.
+
+<!--
+Tested end to end on 2026-11-23 on an Ubuntu 26.04 KVM host with Talos v1.14.6, which ships Kubernetes v1.37.1: from ISO download to all pods Running took about 4 minutes, and a test deployment scheduled on the single node. Update the Talos, talosctl and kubectl versions on these slides together.
+-->
 
 ---
 hideInToc: true
@@ -630,7 +642,7 @@ virsh undefine talos-cluster --nvram --remove-all-storage
 
 References:
 
-- Talos on KVM: https://docs.siderolabs.com/talos/v1.11/platform-specific-installations/virtualized-platforms/kvm
+- Talos on KVM: https://docs.siderolabs.com/talos/v1.14/platform-specific-installations/virtualized-platforms/kvm
 - Talos with Cilium on Proxmox: https://unixorn.github.io/post/homelab/k8s/01-talos-with-cilium-cni-on-proxmox/
 
 ---
